@@ -30,7 +30,7 @@ allowed-tools: Bash Read Write Edit
    - 类型检查命令（tsc / mypy / cargo check / ...）
    - 构建命令
    - 测试命令
-   - 部署方式（GitHub Actions tag push / Cloudflare Workers / npm publish / ...）
+   - 本机交付命令（install script / `cargo install --path .` / `wrangler deploy` / `npm publish` / ...）= 预部署依据
    - 版本号存储位置（package.json#version / Cargo.toml / pyproject.toml / ...）
    - 已登录的外部服务（`wrangler whoami` / `gh auth status` / `npm whoami` / ...）
    - 读取已有 workflow.md（若存在）
@@ -61,7 +61,7 @@ example: `bun run dev`，验证 → `curl` 或 Chrome DevTools MCP 检查页面(
 
 # 发布
 
-代码变更完成后立即执行（= 需求交付的最后环节）。_用一句话描述触发部署的方式._
+代码变更完成后立即执行（= 需求交付的最后环节）。交付 = 预部署 + push。
 
 ## TL;DR
 
@@ -69,10 +69,9 @@ example: `bun run dev`，验证 → `curl` 或 Chrome DevTools MCP 检查页面(
 _≤ 5 行, 按顺序写完整个发布概览:_
 
 1. 验证：`bun run typecheck ...`
-2. 预部署：`bun run deploy ...`
-3. 写版本：`package.json` + `CHANGELOG.md` + `CHANGELOG.dev.md` 同步编辑 (与 tag 一致)
+2. 写版本：`package.json` + `CHANGELOG.md` + `CHANGELOG.dev.md` 同步编辑 (与 tag 一致)
+3. 预部署：`bun run deploy ...`
 4. 发布：commit + annotated tag (`-a -m`) + push branch + tag
-5. 修上版 bug：amend + 删远程 tag + 重打 + force push
 
 ## 1. 验证
 
@@ -80,16 +79,18 @@ _≤ 5 行, 按顺序写完整个发布概览:_
 
 example: `bun run typecheck ...`
 
-## 2. 预部署
+## 2. 写版本
+
+- 版本号: 默认递增 PATCH (第三位); 超大功能更新/调整 → MINOR; 禁止 → MAJOR（除非人类主动要求）.
+- `_version-files(所有强关联版本号的 files)_`同步编辑 (与 tag 一致)
+
+## 3. 预部署
+
+本机完成实际交付 (install / deploy / publish)。
 
 `_预部署命令_`
 
 example: `bun run deploy ...`
-
-## 3. 写版本
-
-- 版本号: 默认递增 PATCH (第三位); 新功能 → MINOR; 不兼容改动 → MAJOR.
-- `_版本文件 1_` + `_版本文件 2_` + `_版本号字段_` 同步编辑 (与 tag 一致)
 
 ## 4. 发布
 
@@ -103,21 +104,6 @@ git tag -a vX.Y.Z -m "vX.Y.Z"
 git push origin branch
 git push origin vX.Y.Z
 ```
-
-## 5. 修上版 bug
-
-上版存在明显 bug 时，amend 修复后重新发布。
-
-_重发布命令序列：amend + tag 重建 + force push._
-
-```bash example
-git commit --amend --no-edit
-git tag -d vX.Y.Z
-git push origin :refs/tags/vX.Y.Z
-git tag -a vX.Y.Z -m "vX.Y.Z"
-git push origin branch --force-with-lease
-git push origin vX.Y.Z
-```
 ````
 
 ## 适配规则
@@ -126,13 +112,14 @@ git push origin vX.Y.Z
 - 调试段：有 dev server / 可运行入口 → 保留；纯 library 且无可调试内容 → 删除整段；用户明确不要 → 删除整段
   - 调试内容 = 启动命令 + 验证方式
   - 验证方式按项目类型：Web 服务 → `curl http://localhost:<port>` / Chrome DevTools MCP 检查页面；API → `curl` 端点示例；CLI → 运行示例命令 + test 命令
-- 发布段：必定保留；根据工程实际裁剪子步骤（验证 / 预部署 / 写版本 / 发布 / 修上版 bug），至少保留「发布」步骤
+- 发布段：必定保留；根据工程实际裁剪子步骤（验证 / 写版本 / 预部署 / 发布），至少保留「写版本」+「发布」步骤
 - 验证命令 → 从 scripts / Makefile / CI 中提取实际 typecheck + build + test 命令
-- 预部署 → 有 wrangler / vercel / docker 等本机部署能力 → 保留；否则删除整段 + TL;DR 对应行
-- 修上版 bug → 通常保留；用户明确不要 → 删除整段 + TL;DR 对应行
+- 预部署 → 有本机交付命令（CLI install / `wrangler deploy` / `npm publish` / docker / ...）→ MUST 保留；产物仅 CI 能产出（多平台二进制 / release page）→ 删除整段 + TL;DR 对应行
+- 写版本 MUST 先于预部署（交付产物需携带新版本号）
+- CI(GHA) → MUST NOT 写入等待 / 轮询 / 验证 CI 结果的步骤（`gh run watch` / `gh run list` / ...）；本条不影响「验证」段的本机 typecheck / build / test
 - 删除段落后重编号保持连续
 - 版本文件 → 识别所有含版本号的文件（package.json / CHANGELOG.md / CHANGELOG.dev.md / Cargo.toml / ...）
-- 发布方式 → 从 CI 配置推断（tag push / merge to main / manual dispatch / ...）；无 CI → 手动 git push（+ `cargo publish` / `npm publish` 等，按生态推断）
+- 发布方式 → commit + annotated tag + push（branch + tag）；本机 `cargo publish` / `npm publish` 归入预部署段
 - git 命令 → 使用当前 branch 名，MUST NOT 硬编码 `main`
 - 用户参数含明确修改指令 → 按指令更新已有内容，不跳过
 - 工程存在独立部署文档（`deploy.md` / `DEPLOY.md` / `deployment.md` / `release.md` / `RELEASE.md`）→ 合并其内容入 workflow.md 发布段，删除原文件；workflow.md 是唯一部署流程文档。**即使主文件跳过生成，本条仍 MUST 执行**

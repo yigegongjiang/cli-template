@@ -22,7 +22,7 @@ allowed-tools: Bash Read Write Edit
 
 ## AGENTS.md 骨架
 
-````markdown
+```markdown
 # AGENTS
 
 > 当前 project 是 AI Only 工程，人类输入的所有需求，都需要 AI(Claude Code、Codex...) 自主完成后续的所有工作。
@@ -45,7 +45,7 @@ allowed-tools: Bash Read Write Edit
 
 1. **分流**：判断人类输入是否涉及行为或交付物变更（feature / fix / config / 行为逻辑变更 = 需求变更）；纯咨询 / 纯文案·注释·md 内容调整（不改变运行行为或交付物）→ 直接响应或编辑，跳过后续步骤
 2. AI 抉择并执行后续工作；开发过程中按需走 [workflow.md#调试](./workflow.md) 验证变更
-3. 执行 [workflow.md#发布](./workflow.md) 完整流程；未发布上线 = 需求未完成，MUST NOT 在发布完成前停止
+3. 执行 [workflow.md#发布](./workflow.md) 完整流程；未走完 = 需求未完成，MUST NOT 提前停止
 
 ## 文档编写规范
 
@@ -55,7 +55,7 @@ allowed-tools: Bash Read Write Edit
 - 单一信源: 跨文档用 link 引用, MUST NOT 复述事实
 - AGENTS 只写 LLM 约束, MUST NOT 塞工程说明 / 命令 / 安装
 - 本段 = 全局写作标准; 其他 md 的 When Editing 仅补充各自特有约束
-````
+```
 
 ## 适配规则
 
